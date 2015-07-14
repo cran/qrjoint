@@ -1,0 +1,13 @@
+ec809819644a61d4aeeaa52533634b2d *DESCRIPTION
+34c38d546f3d661ac52ad5794052ba2a *NAMESPACE
+55154079757e53625eea5e3ef57db04c *R/qrjoint.R
+bf385489e198b4daed3cbf06e19b98b6 *data/plasma.rda
+efaab11512f0a965d622ca89b1cdb21d *man/chull.center.Rd
+0db9d1dba7aa2c9aba72bb24c2a8dcc2 *man/coef.qrjoint.Rd
+580fb0aa0a2770978a3986d9f27340bc *man/getBands.Rd
+8f3079dc6e5074a5909248c04a498c9a *man/plasma.Rd
+f64285b202a46b937d0b7835868fa762 *man/qrjoint-internal.Rd
+ceb38ad344fb7e26f10d5a4cb00611eb *man/qrjoint.Rd
+4d93c06c99244439c5c6c0bae9f82b4b *man/summary.qrjoint.Rd
+9c160dea0c279a14c093fb5cc7f725bc *man/waic.Rd
+fee66c5d12574fde0774217cab9202c4 *src/qrjoint.c

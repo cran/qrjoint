@@ -1,8 +1,10 @@
-qrjoint <- function(x, y, nsamp = 1e3, thin = 10, cens = rep(0,length(y)), incr = 0.01, par = "prior", nknots = 6, hyper = list(sig = c(.1,.1), lam = c(6,4), kap = c(1.5,1.5,1)), shrink = FALSE, prox.range = c(.2,.95), acpt.target = 0.15, ref.size = 3, blocking = "std5", temp = 1, expo = 2, blocks.mu, blocks.S, fix.nu = FALSE){
+## version 2. Playing with the default for kappa
+
+qrjoint <- function(x, y, nsamp = 1e3, thin = 10, cens = rep(0,length(y)), incr = 0.01, par = "prior", nknots = 6, hyper = list(sig = c(.1,.1), lam = c(6,4), kap = c(0.1,0.1,1)), shrink = FALSE, prox.range = c(.2,.95), acpt.target = 0.15, ref.size = 3, blocking = "std5", temp = 1, expo = 2, blocks.mu, blocks.S, fix.nu = FALSE){
 	
 	x <- as.matrix(x)
+    n <- length(y); x <- matrix(x, nrow = n); p <- ncol(x)
 	x.names <- dimnames(x)[[2]]; if(is.null(x.names)) x.names <- paste("X", 1:p, sep = "")
-	n <- length(y); x <- matrix(x, nrow = n); p <- ncol(x)
 	x <- scale(x, chull.center(x))
 	
 	Ltail <- ceiling(log(n*incr,2))
@@ -33,12 +35,15 @@ qrjoint <- function(x, y, nsamp = 1e3, thin = 10, cens = rep(0,length(y)), incr 
 	d.kk <- abs(outer(tau.k, tau.k, "-"))^expo
 	gridmats <- matrix(NA, nknots*(L + nknots)+2, ngrid)
 	K0 <- 0
+    t1 <- Sys.time()
 	for(i in 1:ngrid){
 		K.grid <- exp(-lamsq.grid[i] * d.kg); K.knot <- exp(-lamsq.grid[i] * d.kk);	diag(K.knot) <- 1 + 1e-10	
 		R.knot <- chol(K.knot); A.knot <- solve(K.knot, K.grid)
 		gridmats[,i] <- c(c(A.knot), c(R.knot), sum(log(diag(R.knot))), lp.grid[i])		
 		K0 <- K0 + prior.grid[i] * K.knot
 	}
+    t2 <- Sys.time()
+    cat("Matrix calculation time per 1e3 iterations =", round(1e3 * as.numeric(t2 - t1), 2), "\n")
 	
 	niter <- nsamp * thin
 	dimpars <- c(n, p, L, mid - 1, nknots, ngrid, ncol(a.kap), niter, thin, nsamp)
@@ -408,41 +413,42 @@ estFn <- function(par, x, y, gridmats, L, mid, nknots, ngrid, a.kap, a.sig, tau.
 }
 
 
-chull.center <- function(x, maxEPts = ncol(x) + 1, plot = FALSE){
-	sx <- as.matrix(apply(x, 2, function(s) punif(s, min(s), max(s))))
-	dd <- rowSums(scale(sx)^2)
-	ix.dd <- order(dd, decreasing = TRUE)
-	sx <- sx[ix.dd,,drop = FALSE]
-	x.chol <- inchol(sx, maxiter = maxEPts)
-	ix.epts <- ix.dd[pivots(x.chol)]
-	x.choose <- x[ix.epts,,drop = FALSE]
-	xCent <- as.numeric(colMeans(x.choose))
-	attr(xCent, "EPts") <- ix.epts
-	if(plot){
-		n <- nrow(x); p <- ncol(x)
-		xjit <- x + matrix(rnorm(n*p),n,p) %*% diag(0.05*apply(x,2,sd),p)
-		xmean <- colMeans(x)
-		x.ept <- x[ix.epts,]
-		M <- choose(p, 2)
-		xnames <- dimnames(x)[[2]]
-		if(is.null(xnames)) xnames <- paste("x", 1:p, sep = "")
-		par(mfrow = c(ceiling(M/ceiling(sqrt(M))),ceiling(sqrt(M))), mar = c(2,3,0,0) +.1)
-		xmax <- apply(x, 2, max)
-		for(i in 1:(p-1)){
-			for(j in (i+1):p) {
-				plot(x[,i], x[,j], col = "gray", cex = 1, ann = FALSE, ty = "n", axes = FALSE, bty = "l")
-				title(xlab = xnames[i], line = 0.3)
-				title(ylab = xnames[j], line = 0.3)
-				ept <- chull(x[,i], x[,j])
-				polygon(x[ept,i], x[ept,j], col = gray(0.8), border = "white")
-				points(xjit[,i], xjit[,j], pch = ".", col = "black")
-				points(xmean[i], xmean[j], col = "red", pch = "x", cex = 1.5)
-				points(xCent[i], xCent[j], col = "cyan", pch = 19, cex = 1)
-				points(x.ept[,i], x.ept[,j], col = "yellow", pch = 10, cex = 1)
-			}
-		}
-	}
-	return(xCent)
+chull.center <- function (x, maxEPts = ncol(x) + 1, plot = FALSE){
+    sx <- as.matrix(apply(x, 2, function(s) punif(s, min(s), max(s))))
+    dd <- rowSums(scale(sx)^2)
+    ix.dd <- order(dd, decreasing = TRUE)
+    sx <- sx[ix.dd, , drop = FALSE]
+    x.chol <- inchol(sx, maxiter = maxEPts)
+    ix.epts <- ix.dd[pivots(x.chol)]
+    x.choose <- x[ix.epts, , drop = FALSE]
+    xCent <- as.numeric(colMeans(x.choose))
+    attr(xCent, "EPts") <- ix.epts
+    if (plot) {
+        n <- nrow(x)
+        p <- ncol(x)
+        xjit <- x + matrix(rnorm(n * p), n, p) %*% diag(0.05 * apply(x, 2, sd), p)
+        xmean <- colMeans(x)
+        x.ept <- x[ix.epts, ]
+        M <- choose(p, 2)
+        xnames <- dimnames(x)[[2]]
+        if (is.null(xnames)) xnames <- paste("x", 1:p, sep = "")
+        par(mfrow = c(ceiling(M/ceiling(sqrt(M))), ceiling(sqrt(M))), mar = c(2, 3, 0, 0) + 0.1)
+        xmax <- apply(x, 2, max)
+        for (i in 1:(p - 1)) {
+            for (j in (i + 1):p) {
+                plot(x[, i], x[, j], col = "gray", cex = 1, ann = FALSE, ty = "n", axes = FALSE, bty = "l")
+                title(xlab = xnames[i], line = 0.3)
+                title(ylab = xnames[j], line = 0.3)
+                ept <- chull(x[, i], x[, j])
+                polygon(x[ept, i], x[ept, j], col = gray(0.9), border = "white")
+                points(xjit[, i], xjit[, j], pch = ".", col = gray(0.6))
+                points(xmean[i], xmean[j], col = gray(0), pch = 17, cex = 1)
+                points(xCent[i], xCent[j], col = gray(0), pch = 1, cex = 2)
+                points(x.ept[, i], x.ept[, j], col = gray(.3), pch = 10, cex = 1.5)
+            }
+        }
+    }
+    return(xCent)
 }
 
 

@@ -8,7 +8,7 @@
 \usage{ 
 qrjoint(x, y, nsamp = 1e3, thin = 10, cens = rep(0,length(y)), 
     incr = 0.01, par = "prior", nknots = 6, 
-    hyper = list(sig = c(.1,.1), lam = c(6,4), kap = c(1.5,1.5,1)), 
+    hyper = list(sig = c(.1,.1), lam = c(6,4), kap = c(.1,.1,1)), 
     shrink = FALSE, prox.range = c(.2,.95), acpt.target = 0.15, 
     ref.size = 3, blocking = "std5", temp = 1, expo = 2, 
     blocks.mu, blocks.S, fix.nu=FALSE)

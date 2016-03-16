@@ -143,8 +143,10 @@ double ppFn0(double *wknot, double *w, double *postgrid){
 		mvprod(Agrid[i], wknot, wgrid[i], L, m, 0);
 		trisolve(Rgrid[i], m, wknot, zknot, 1);
 		zss = sumsquares(zknot, m);
-		akapm = 1.5 + 0.5 * (double)m;
-		llgrid[i] = -akapm * log1p(0.5 * zss / 1.5);
+		//akapm = 1.5 + 0.5 * (double)m;
+		//llgrid[i] = -akapm * log1p(0.5 * zss / 1.5);
+        akapm = 0.1 + 0.5 * (double)m;
+        llgrid[i] = -akapm * log1p(0.5 * zss / 0.1);
 		postgrid[i] = llgrid[i] - ldRgrid[i] + lpgrid[i];
 	}
 	
@@ -1059,7 +1061,7 @@ void adMCMC(int niter, int thin, int npar, double *par, double **mu, double ***S
 	double **parbar_chunk = (double **)R_alloc(nblocks, sizeof(double *));
 	double *alpha = vect(nblocks);
 	double *frac = vect(nblocks);
-	double *ppick = vect(nblocks);
+	//double *ppick = vect(nblocks);
 	
 	for(b = 0; b < nblocks; b++){
 		chunk_size[b] = 0;

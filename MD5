@@ -1,4 +1,4 @@
-3667fca16e9da8d72e7e8f26e6e3b4af *DESCRIPTION
+67f5dcb573b953901f95b802b3db68d0 *DESCRIPTION
 9d63725223d9c846868bf8dd43ec095c *NAMESPACE
 f840f2933a2d82cb78b5e192ff85b987 *R/qrjoint.R
 bf385489e198b4daed3cbf06e19b98b6 *data/plasma.rda
@@ -15,5 +15,5 @@ cd137bd621cfa1fe7f2ed7af244cbe21 *man/qrjoint.Rd
 16bc466c87fc7ac2f21753b6769e6a38 *man/summary.qde.Rd
 ec8c1d9b658b2c051385017570dc91ef *man/summary.qrjoint.Rd
 abce0c354326e9bb52bb612c65e67291 *man/waic.Rd
-ef3464e89175752ef6f748c6c532c1c4 *src/qrjoint.c
+e7a934494bb4165d37c0bb34859abc17 *src/qrjoint.c
 5e8a615e3417534c969e4631b293bafd *src/registerDynamicSymbol.c

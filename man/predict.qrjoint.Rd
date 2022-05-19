@@ -14,10 +14,7 @@
     \item{nmc}{integer giving the number of samples, post burn-in, to be used in Monte Carlo averaging}
     \item{...}{currently no additional arguments are allowed}
 }
-\value{Either returns
-\item{}{a matrix of posterior quantile-function estimates if \code{summarize=TRUE}. Dimensions are \code{n} (number of rows in predicted data) x \code{L} (length of regularized tau.grid); or}
-\item{}{a three dimensional array of posterior quantile-function samples if \code{summarize=FALSE}. Dimensions are \code{n} (number of rows in predicted data) x \code{L} (length of regularized tau.grid)  x \code{nmc} (retained posterior draws).}
-
+\value{Either returns a matrix of posterior quantile-function estimates if \code{summarize=TRUE}. Dimensions are \code{n} (number of rows in predicted data) x \code{L} (length of regularized tau.grid); or a three dimensional array of posterior quantile-function samples if \code{summarize=FALSE}. Dimensions are \code{n} (number of rows in predicted data) x \code{L} (length of regularized tau.grid)  x \code{nmc} (retained posterior draws).
 }
 
 \note{

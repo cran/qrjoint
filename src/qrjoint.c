@@ -345,12 +345,12 @@ double ppFn(double *wknot, double *w, double *postgrid){
 
 double logpostFn_noX(double *par, double temp, int llonly, double *ll, double *pg, double *rp){
     
-    int i, l, reach = 0, reach2 = 0;
+    int i, l, reach = 0;//, reach2 = 0;
     double w0max, zeta0tot, lps0, gam0, sigma, nu, QPos, QPosold, QNeg, QNegold, sigmat1, sigmat2, den0;
     
     lps0 = ppFn0(par, w0, pg);
     reach += m;
-    reach2 += ngrid;
+    //reach2 += ngrid;
     
     w0max = vmax(w0, L);
     for(l = 0; l < L; l++) zeta0dot[l] = exp(w0[l] - w0max);
@@ -506,14 +506,14 @@ double logpostFn(double *par, double temp, int llonly, double *ll, double *pg, d
 		reach += m; reach2 += ngrid;
 	}
 	
-	if(temp > 0.0){
-		for(i = 0; i < n; i++) {
-		  ll[i] = log(0.0);
-	    rp[i] = taugrid[mid];
-	  }
-        mmprod(vMat, x, a, L, p, n, 1, 1, 0); // vMat%*%x  (L x p0)%*%(p x n) gives 'a' (L x n) as output 
+    if(temp > 0.0){
+        for(i = 0; i < n; i++) {
+            ll[i] = log(0.0);
+            rp[i] = taugrid[mid];
+        }
+        mmprod(vMat, x, a, L, p, n, 1, 1, 0); // vMat%*%x  (L x p0)%*%(p x n) gives 'a' (L x n) as output
         for(l = 0; l < L; l++){
-			for(vNormSq[l] = 0.0, j = 0; j < p; j++) vNormSq[l] += vMat[j][l] * vMat[j][l];
+            for(vNormSq[l] = 0.0, j = 0; j < p; j++) vNormSq[l] += vMat[j][l] * vMat[j][l];
             if(vNormSq[l] > 0.0){
                 aX[l] = -vmin(a[l], n) / sqrt(vNormSq[l]);
                 for(j = 0; j < p; j++) vTilde[j][l] = vMat[j][l] / (aX[l] * sqrt(1.0 + vNormSq[l]));  // calculate v-tidle, the attenuator
@@ -521,8 +521,8 @@ double logpostFn(double *par, double temp, int llonly, double *ll, double *pg, d
                 for(j = 0; j < p; j++) vTilde[j][l] = 0.0;
             }
         }
-			
-// Median values, sigma, and nu are stored as last parameters is par.
+
+        // Median values, sigma, and nu are stored as last parameters is par.
         gam0 = par[reach++];            // pointer to gamma_0 (median intercept)
         gam = par + reach; reach += p;  // pointer to gamma's (median effect for each covariate)
         sigma = sigFn(par[reach++]);    // sigma, stored in logged form, exponentiated here
@@ -531,8 +531,12 @@ double logpostFn(double *par, double temp, int llonly, double *ll, double *pg, d
         
         // Obtain prediction and residuals for each observation if predictions
         // were solely based reference
-        for(i = 0; i < n; i++) xLin[i] = gam0 + inprod(x[i], gam, p);
-        for(i = 0; i < n; i++) resLin[i] = y[i] - xLin[i];
+        for(i = 0; i < n; i++){
+            if(wt[i] != 0.0){
+                xLin[i] = gam0 + inprod(x[i], gam, p);
+                resLin[i] = y[i] - xLin[i];
+            }
+        }
         //Rprintvec("resLin = ", "%g ", resLin, n);
         
         // Obtain beta_0(tau)'s derivative at each tau location
@@ -559,69 +563,71 @@ double logpostFn(double *par, double temp, int llonly, double *ll, double *pg, d
         // Contribution to log-likelihood of point y_i
         double qdot_lo = 0.0, qdot_up = 0.0; //, h=0.5;
         for(i = 0; i < n; i++){  // add in contributions from each observation
-            if(resLin[i] == 0.0){  // case Y_i=median data quantile
-                for(den0 = b0dot[mid], j = 0; j < p; j++) den0 += x[i][j] * bdot[j][mid];
-                ll[i] = -log(den0);
-            } else if(resLin[i] > 0.0){ // case Y_i > median data quantile, 
-                l = 0;
-                QPosold = 0.0;
-                // Find conditional quantile of median (on x_i) by adding contributions of all covariates
-                for(QPos = Q0Pos[l], j = 0; j < p; j++) QPos += x[i][j] * bPos[j][l];
-                   // Then check where Y_i is in relation to quantile.
-                   // If it is still above the quantile, calc Conditional quantile of next tau up on grid
-                   // Repeat until locating which tau corresponds to Q(tau) ~ Y_i 
-                while(resLin[i] > QPos && l < L-mid-1){
-                    QPosold = QPos;
-                    l++;
+            if(wt[i] != 0.0){
+                if(resLin[i] == 0.0){  // case Y_i=median data quantile
+                    for(den0 = b0dot[mid], j = 0; j < p; j++) den0 += x[i][j] * bdot[j][mid];
+                    ll[i] = -log(den0);
+                } else if(resLin[i] > 0.0){ // case Y_i > median data quantile,
+                    l = 0;
+                    QPosold = 0.0;
+                    // Find conditional quantile of median (on x_i) by adding contributions of all covariates
                     for(QPos = Q0Pos[l], j = 0; j < p; j++) QPos += x[i][j] * bPos[j][l];
-                }
-                // if point located above largest grid tau...
-                if(l == L - mid - 1){
-                  rp[i] = F0tail(Q0tail(taugrid[L-2], nu) + (resLin[i] - QPosold)/sigmat1, nu) ;
-                    switch (cens[i]) {
-                    case 1: ll[i] = log(1.0 - rp[i]); break;
-                    case 2: ll[i] = log(rp[i]); break;
-                    default:ll[i] = lf0tail(Q0tail(taugrid[L-2], nu) + (resLin[i] - QPosold)/sigmat1, nu) - log(sigmat1); break;
+                       // Then check where Y_i is in relation to quantile.
+                       // If it is still above the quantile, calc Conditional quantile of next tau up on grid
+                       // Repeat until locating which tau corresponds to Q(tau) ~ Y_i
+                    while(resLin[i] > QPos && l < L-mid-1){
+                        QPosold = QPos;
+                        l++;
+                        for(QPos = Q0Pos[l], j = 0; j < p; j++) QPos += x[i][j] * bPos[j][l];
                     }
-                }  else {
-                  // if located anywhere in estimated grid...
-                  for(qdot_lo = b0dot[mid+l-1], j = 0; j < p; j++) qdot_lo += bdot[j][mid+l-1] * x[i][j];
-                  for(qdot_up = b0dot[mid+l], j = 0; j < p; j++) qdot_up += bdot[j][mid+l] * x[i][j];
-                  rp[i] = find_tau_lo(resLin[i], QPosold, qdot_lo, qdot_up, taugrid[mid+l-1], taugrid[mid+l]);
-                  switch (cens[i]) {
-                    case 1: ll[i] = log(1.0 - rp[i]); break;
-                    case 2: ll[i] = log(rp[i]); break;
-                    default:ll[i] = -log(part_trape_rp(rp[i], qdot_lo, qdot_up, taugrid[mid+l-1], taugrid[mid+l])); break;
-                  }
-                }
-            } else {
-                l = 0;
-                QNegold = 0.0;
-                // Follow similar algorithm but working way from median to lower quantiles
-                for(QNeg = Q0Neg[l], j = 0; j < p; j++) QNeg += x[i][j] * bNeg[j][l];
-                while(resLin[i] < -QNeg && l < mid){
-                    QNegold = QNeg;
-                    l++;
-                    for(QNeg = Q0Neg[l], j = 0; j < p; j++) QNeg += x[i][j] * bNeg[j][l];
-                }
-                if(l == mid){               // tail
-                    rp[i] = F0tail(Q0tail(taugrid[1], nu) + (resLin[i] + QNegold)/sigmat2, nu) ;
-                    switch (cens[i]) {
-                      case 1: ll[i] = log(1.0 - rp[i]); break;
-                      case 2: ll[i] = log(rp[i]); break;
-                      default:ll[i] = lf0tail(Q0tail(taugrid[1], nu) + (resLin[i] + QNegold)/sigmat2, nu) - log(sigmat2); break;
+                    // if point located above largest grid tau...
+                    if(l == L - mid - 1){
+                      rp[i] = F0tail(Q0tail(taugrid[L-2], nu) + (resLin[i] - QPosold)/sigmat1, nu) ;
+                        switch (cens[i]) {
+                        case 1: ll[i] = log(1.0 - rp[i]); break;
+                        case 2: ll[i] = log(rp[i]); break;
+                        default:ll[i] = lf0tail(Q0tail(taugrid[L-2], nu) + (resLin[i] - QPosold)/sigmat1, nu) - log(sigmat1); break;
+                        }
+                    }  else {
+                      // if located anywhere in estimated grid...
+                      for(qdot_lo = b0dot[mid+l-1], j = 0; j < p; j++) qdot_lo += bdot[j][mid+l-1] * x[i][j];
+                      for(qdot_up = b0dot[mid+l], j = 0; j < p; j++) qdot_up += bdot[j][mid+l] * x[i][j];
+                      rp[i] = find_tau_lo(resLin[i], QPosold, qdot_lo, qdot_up, taugrid[mid+l-1], taugrid[mid+l]);
+                      switch (cens[i]) {
+                        case 1: ll[i] = log(1.0 - rp[i]); break;
+                        case 2: ll[i] = log(rp[i]); break;
+                        default:ll[i] = -log(part_trape_rp(rp[i], qdot_lo, qdot_up, taugrid[mid+l-1], taugrid[mid+l])); break;
+                      }
                     }
                 } else {
-                    for(qdot_lo = b0dot[mid-l], j = 0; j < p; j++) qdot_lo += bdot[j][mid-l] * x[i][j];
-                    for(qdot_up = b0dot[mid-l+1], j = 0; j < p; j++) qdot_up += bdot[j][mid-l+1] * x[i][j];
-                    rp[i] = find_tau_up(resLin[i], -QNegold, qdot_lo, qdot_up, taugrid[mid-l], taugrid[mid-l+1]); //2
-                    switch (cens[i]) {
-                      case 1: ll[i] = log(1.0 - rp[i]); break;
-                      case 2: ll[i] = log(rp[i]); break;
-                      default:ll[i] = -log(part_trape_rp(rp[i], qdot_lo, qdot_up, taugrid[mid-l], taugrid[mid-l+1])); break;
+                    l = 0;
+                    QNegold = 0.0;
+                    // Follow similar algorithm but working way from median to lower quantiles
+                    for(QNeg = Q0Neg[l], j = 0; j < p; j++) QNeg += x[i][j] * bNeg[j][l];
+                    while(resLin[i] < -QNeg && l < mid){
+                        QNegold = QNeg;
+                        l++;
+                        for(QNeg = Q0Neg[l], j = 0; j < p; j++) QNeg += x[i][j] * bNeg[j][l];
+                    }
+                    if(l == mid){               // tail
+                        rp[i] = F0tail(Q0tail(taugrid[1], nu) + (resLin[i] + QNegold)/sigmat2, nu) ;
+                        switch (cens[i]) {
+                          case 1: ll[i] = log(1.0 - rp[i]); break;
+                          case 2: ll[i] = log(rp[i]); break;
+                          default:ll[i] = lf0tail(Q0tail(taugrid[1], nu) + (resLin[i] + QNegold)/sigmat2, nu) - log(sigmat2); break;
+                        }
+                    } else {
+                        for(qdot_lo = b0dot[mid-l], j = 0; j < p; j++) qdot_lo += bdot[j][mid-l] * x[i][j];
+                        for(qdot_up = b0dot[mid-l+1], j = 0; j < p; j++) qdot_up += bdot[j][mid-l+1] * x[i][j];
+                        rp[i] = find_tau_up(resLin[i], -QNegold, qdot_lo, qdot_up, taugrid[mid-l], taugrid[mid-l+1]); //2
+                        switch (cens[i]) {
+                          case 1: ll[i] = log(1.0 - rp[i]); break;
+                          case 2: ll[i] = log(rp[i]); break;
+                          default:ll[i] = -log(part_trape_rp(rp[i], qdot_lo, qdot_up, taugrid[mid-l], taugrid[mid-l+1])); break;
+                        }
                     }
                 }
-            }			
+            }
             if(ll[i] == qt(1.0, 1.0, 1, 0)) Rprintf("i = %d, ll[i] = %g, resLin[i] = %g, l = %d\n", i, ll[i], resLin[i], l);
         }
 	} else {
@@ -1286,7 +1292,7 @@ void DEV(double *par, double *xVar, double *yVar, int *status, double *weights, 
     zeta0_dist = vect(L);
 	
 	reach = 0;
-	int iter, reach2 = 0, reach3 = 0;
+    int iter, reach2 = 0, reach3 = 0;
 	for(iter = 0; iter < niter; iter++){
 		devsamp[iter] = -2.0 * logpostFn(par + reach, 1.0, 1, llsamp + reach2, pgsamp + reach3, rpsamp + reach2);
 		reach += npar; reach2 += n; reach3 += ngrid * (p+1);
@@ -1352,10 +1358,10 @@ void PRED_noX(double *par, double *yGrid, double *hyper, int *dim, double *gridp
     
     reach = 0;
     double lldummy, *pgdummy = vect(ngrid), *rpdummy = vect(n);
-    int iter, reach2 = 0, reach3 = 0;
+    int iter, reach2 = 0;//, reach3 = 0;
     for(iter = 0; iter < niter; iter++){
         lldummy = logpostFn_noX(par + reach, 1.0, 1, logdenssamp + reach2, pgdummy, rpdummy);
-        reach += npar; reach2 += n; reach3 += ngrid;
+        reach += npar; reach2 += n; //reach3 += ngrid;
     }
 }
 
@@ -1881,8 +1887,9 @@ void adMCMC(int niter, int thin, int npar, double *par, double **mu, double ***S
 	double **parbar_chunk = (double **)R_alloc(nblocks, sizeof(double *));
 	double *alpha = vect(nblocks);
 	double *frac = vect(nblocks);
-	//double *ppick = vect(nblocks);
-	
+	double *ppick = vect(nblocks);
+    for(b = 0; b < nblocks; b++) ppick[b] = sqrt(1.0+blocks_size[b]);
+    
 	for(b = 0; b < nblocks; b++){
 		chunk_size[b] = 0;
 		acpt_chunk[b] = 0.0;
@@ -1908,31 +1915,54 @@ void adMCMC(int niter, int thin, int npar, double *par, double **mu, double ***S
 	GetRNGstate();
 	for(iter = 0; iter < niter; iter++){
 		//		for(b = 0; b < nblocks; b++) ppick[b] = fabs(log(1.0e-6 + acpt_chunk[b]) - log(acpt_target[0]));
-		for(b = 0; b < nblocks; b++){
-			//b = floor(nblocks * runif(0.0, 1.0));
-			//		b = rdraw(nblocks, ppick, 0);
-			chunk_size[b]++;
-			for(i = 0; i < blocks_size[b]; i++) zsamp[i] = rnorm(0.0, 1.0);
-			triprod(R[b], blocks_size[b], blocks_size[b], zsamp, par_incr, 1);
-			for(i = 0; i < npar; i++) parstore[iparnew][i] = parstore[ipar][i];
-			lambda = lm[b] * sqrt(3.0 / rgamma(3.0, 1.0));
-			for(i = 0; i < blocks_size[b]; i++) parstore[iparnew][blocks[b][i]] += lambda * par_incr[i];
-			lpvalnew = lpFn(parstore[iparnew], temp);
-			lp_diff = lpvalnew - lpval;
-			alpha[b] = exp(lp_diff); if(alpha[b] > 1.0) alpha[b] = 1.0;
-			if(log(runif(0.0, 1.0)) < lp_diff){      
-				ipar = iparnew;
-				iparnew = !ipar;
-				lpval = lpvalnew;
-			}			
-			alpha_run[b] = ((double)run_counter[b] * alpha_run[b] + alpha[b]) / ((double)(run_counter[b] + 1.0));
-			run_counter[b]++;
-		}
-		if((iter + 1) % thin == 0){
+		//for(b = 0; b < nblocks; b++){
+        b = rdraw(nblocks, ppick, 0);
+        chunk_size[b]++;
+        for(i = 0; i < blocks_size[b]; i++) zsamp[i] = rnorm(0.0, 1.0);
+        triprod(R[b], blocks_size[b], blocks_size[b], zsamp, par_incr, 1);
+        for(i = 0; i < npar; i++) parstore[iparnew][i] = parstore[ipar][i];
+        lambda = lm[b] * sqrt(3.0 / rgamma(3.0, 1.0));
+        for(i = 0; i < blocks_size[b]; i++) parstore[iparnew][blocks[b][i]] += lambda * par_incr[i];
+        lpvalnew = lpFn(parstore[iparnew], temp);
+        lp_diff = lpvalnew - lpval;
+        alpha[b] = exp(lp_diff); if(alpha[b] > 1.0) alpha[b] = 1.0;
+        if(log(runif(0.0, 1.0)) < lp_diff){
+            ipar = iparnew;
+            iparnew = !ipar;
+            lpval = lpvalnew;
+        }
+        alpha_run[b] = ((double)run_counter[b] * alpha_run[b] + alpha[b]) / ((double)(run_counter[b] + 1.0));
+        run_counter[b]++;
+		//}
+//        for(b = 0; b < nblocks; b++){
+            chs = (double) chunk_size[b]; if(chs < 1.0) chs = 1.0;
+            acpt_chunk[b] = acpt_chunk[b] + (alpha[b] - acpt_chunk[b]) / chs;
+            for(i = 0; i < blocks_size[b]; i++)
+                parbar_chunk[b][i] += (parstore[ipar][blocks[b][i]] - parbar_chunk[b][i]) / chs;
+            
+            if(chunk_size[b] == refresh * blocks_size[b]){
+                refresh_counter[b]++;
+                frac[b] = sqrt(1.0 / ((double)refresh_counter[b] + 1.0));
+                for(i = 0; i < blocks_size[b]; i++){
+                    for(j = 0; j < i; j++){
+                        S[b][i][j] = (1.0 - frac[b]) * S[b][i][j] + frac[b] * (parbar_chunk[b][i] - mu[b][i]) * (parbar_chunk[b][j] - mu[b][j]);
+                        S[b][j][i] = S[b][i][j];
+                    }
+                    S[b][i][i] = (1.0 - frac[b]) * S[b][i][i] + frac[b] * (parbar_chunk[b][i] - mu[b][i]) * (parbar_chunk[b][i] - mu[b][i]);
+                }
+                chol(R[b], blocks_size[b], 1.0e-8, blocks_pivot[b], blocks_rank + b, blocks_size[b], blocks_d, S[b], 0, 0, 1.0e-10);
+                for(i = 0; i < blocks_size[b]; i++) mu[b][i] += frac[b] * (parbar_chunk[b][i] - mu[b][i]);
+                lm[b] *= exp(frac[b] * (acpt_chunk[b] - acpt_target[b]));
+                acpt_chunk[b] = 0.0;
+                for(i = 0; i < blocks_size[b]; i++) parbar_chunk[b][i] = 0.0;
+                chunk_size[b] = 0;
+            }
+        //}
+        if((iter + 1) % thin == 0){
 			lpsamp[store_lp++] = lpval;
 			for(i = 0; i < npar; i++) parsamp[store_par++] = parstore[ipar][i];
 			for(b = 0; b < nblocks; b++) acptsamp[store_acpt++] = alpha[b];
-		}
+        }
 		
 		if(verbose){
 			if(niter < ticker || (iter + 1) % (niter / ticker) == 0){
@@ -1945,30 +1975,6 @@ void adMCMC(int niter, int thin, int npar, double *par, double **mu, double ***S
 			}
 		}
 		
-		for(b = 0; b < nblocks; b++){
-			chs = (double) chunk_size[b]; if(chs < 1.0) chs = 1.0;
-			acpt_chunk[b] = acpt_chunk[b] + (alpha[b] - acpt_chunk[b]) / chs;
-			for(i = 0; i < blocks_size[b]; i++)
-				parbar_chunk[b][i] += (parstore[ipar][blocks[b][i]] - parbar_chunk[b][i]) / chs;  
-			
-			if(chunk_size[b] == refresh * blocks_size[b]){
-				refresh_counter[b]++;
-				frac[b] = sqrt(1.0 / ((double)refresh_counter[b] + 1.0));
-				for(i = 0; i < blocks_size[b]; i++){
-					for(j = 0; j < i; j++){
-						S[b][i][j] = (1.0 - frac[b]) * S[b][i][j] + frac[b] * (parbar_chunk[b][i] - mu[b][i]) * (parbar_chunk[b][j] - mu[b][j]);
-						S[b][j][i] = S[b][i][j];
-					}
-					S[b][i][i] = (1.0 - frac[b]) * S[b][i][i] + frac[b] * (parbar_chunk[b][i] - mu[b][i]) * (parbar_chunk[b][i] - mu[b][i]);
-				}
-				chol(R[b], blocks_size[b], 1.0e-8, blocks_pivot[b], blocks_rank + b, blocks_size[b], blocks_d, S[b], 0, 0, 1.0e-10);
-				for(i = 0; i < blocks_size[b]; i++) mu[b][i] += frac[b] * (parbar_chunk[b][i] - mu[b][i]);
-				lm[b] *= exp(frac[b] * (acpt_chunk[b] - acpt_target[b]));
-				acpt_chunk[b] = 0.0;
-				for(i = 0; i < blocks_size[b]; i++) parbar_chunk[b][i] = 0.0;
-				chunk_size[b] = 0;
-			}
-		}
 	}
 	PutRNGstate();
 	for(i = 0; i < npar; i++) par[i] = parstore[ipar][i];

@@ -1,6 +1,6 @@
-82833642debc39c45dca70b5439d379a *DESCRIPTION
-9d63725223d9c846868bf8dd43ec095c *NAMESPACE
-461f2abeefea8029ccc485431075ae34 *R/qrjoint.R
+942e2d14abee79bd68c4938dbd54a72b *DESCRIPTION
+15dfaefb7b99f36ca2ba77a77d1ee5d3 *NAMESPACE
+16c0cdf36272f5d192bc76a4bc805ac1 *R/qrjoint.R
 bf385489e198b4daed3cbf06e19b98b6 *data/plasma.rda
 afb75eb4ee9de8913ef9f40d07880357 *data/redmaple.rda
 9f4ec657c025f1484b5391ae69fcb89d *man/chull.center.Rd
@@ -9,7 +9,7 @@ aecf55ad642e6c7679e6458c585d4437 *man/coef.qrjoint.Rd
 c5bd37a4697634fdfe50fc6fc9cd1b8c *man/getBands.Rd
 8f3079dc6e5074a5909248c04a498c9a *man/plasma.Rd
 2193951c3b8be320b285b778d993f79e *man/predict.qde.Rd
-23ba962aa174b9ae29263b8822e31072 *man/predict.qrjoint.Rd
+e27d5b140831614833c46dd76bf0b4d8 *man/predict.qrjoint.Rd
 94c510e8076575533b4f4e8a7adb6d3c *man/qde.Rd
 5d51ef839f94d6361604c109a8bdb257 *man/qrjoint-internal.Rd
 f1a5ab95d10797502f8b324be65859b7 *man/qrjoint.Rd
@@ -17,5 +17,5 @@ dc68f9e3ae1b68a0beaede0a0f691526 *man/redmaple.Rd
 16c3c38115842264039146e5f9fb0c76 *man/summary.qde.Rd
 c6f487882011fa58c827c64bf2060c5e *man/summary.qrjoint.Rd
 abce0c354326e9bb52bb612c65e67291 *man/waic.Rd
-6d2dd4b80b7c12c92b39f1047827cca1 *src/qrjoint.c
+67a174a734fef75135bf81a86fba4f63 *src/qrjoint.c
 5e8a615e3417534c969e4631b293bafd *src/registerDynamicSymbol.c

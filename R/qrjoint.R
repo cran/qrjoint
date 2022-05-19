@@ -142,7 +142,7 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
         # "dither" slightly perturbs responses in order to avoid potential degeneracy
         # of dual simplex algorithm (present with large number of ties in y) and "hanging"
         # of the rq Fortran code
-        beta.rq <- sapply(tau.g, function(a) return(coef(suppressWarnings(rq(dither(y) ~ x, tau = a, weights = wt)))))   # THIS COULD BE DONE WITH tau=tau.g
+        beta.rq <- sapply(tau.g, function(a) return(coef(suppressWarnings(quantreg::rq(dither(y) ~ x, tau = a, weights = wt)))))   # THIS COULD BE DONE WITH tau=tau.g
         v <- bs(tau.g, df = 5)
 		
         # over tau and per coefficient get smoothed fits through data (ie independently estimated quantiles);
@@ -185,7 +185,7 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
         # Initialize at a model space approximation of the estimates from rq
         par <- rep(0, (nknots+1) * (p+1) + 2)
         
-        beta.rq <- sapply(tau.g, function(a) return(coef(suppressWarnings(rq(dither(y)~ x, tau = a, weights = wt)))))
+        beta.rq <- sapply(tau.g, function(a) return(coef(suppressWarnings(quantreg::rq(dither(y)~ x, tau = a, weights = wt)))))
         v <- bs(tau.g, df = 5)
         rq.lm <- apply(beta.rq, 1, function(z) return(coef(lm(z ~ v)))) # smooth though non-monotonic estimates
         
@@ -249,7 +249,7 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
         par <- rep(0, (nknots + 1) * (p + 1) + 2)
         par[c(1:nknots, nknots * (p + 1) + 1, (nknots + 1) * (p + 1) + 1:2)] <- fit0$par
     } else {
-        if(!is.numeric(par)) stop(paste0("'par' must be initialized either as a numeric vector of length", (nknots + 1)*(p+1) + 2, " or, as one of the following strings: 'prior', 'RQ', 'noX'"))
+        if(!is.numeric(par)) stop(paste0("'par' must be initialized either as a numeric vector of length ", (nknots + 1)*(p+1) + 2, " or, as one of the following strings: 'prior', 'RQ', 'noX'"))
         if(length(par) != (nknots + 1)*(p+1) + 2) stop(paste0("'par' numeric vector must have length = ", (nknots + 1)*(p+1) + 2))
     }
     
@@ -309,13 +309,13 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
         if(substr(blocking, 1, 3) == "std"){
             for(i in 1:(p+1)) blocks.S[[i]][1:nknots, 1:nknots] <- K0
             if(as.numeric(substr(blocking, 4,5)) > 1){
-                blocks.S[[p + 2]] <- summary(suppressWarnings(rq(dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
+                blocks.S[[p + 2]] <- summary(suppressWarnings(quantreg::rq(dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
                 blocks.S[[p + 3]] <- matrix(c(1, 0, 0, .1), 2, 2)[sig.nu,sig.nu]
             }
             if(as.numeric(substr(blocking, 4,5)) == 5){
                 slist <- list(); length(slist) <- p + 3
                 for(i in 1:(p+1)) slist[[i]] <- K0
-                slist[[p+2]] <- summary(suppressWarnings(rq(dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
+                slist[[p+2]] <- summary(suppressWarnings(quantreg::rq(dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
                 slist[[p+3]] <- matrix(c(1, 0, 0, .1), 2, 2)[sig.nu,sig.nu]
                 blocks.S[[p + 4]] <- as.matrix(bdiag(slist))
             }

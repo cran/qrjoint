@@ -1,6 +1,6 @@
-942e2d14abee79bd68c4938dbd54a72b *DESCRIPTION
+88e3b132a3a8d9fe5a7ce927137774ce *DESCRIPTION
 15dfaefb7b99f36ca2ba77a77d1ee5d3 *NAMESPACE
-16c0cdf36272f5d192bc76a4bc805ac1 *R/qrjoint.R
+49f101561a80dfaec1985713d50d6ce4 *R/qrjoint.R
 bf385489e198b4daed3cbf06e19b98b6 *data/plasma.rda
 afb75eb4ee9de8913ef9f40d07880357 *data/redmaple.rda
 9f4ec657c025f1484b5391ae69fcb89d *man/chull.center.Rd
@@ -17,5 +17,5 @@ dc68f9e3ae1b68a0beaede0a0f691526 *man/redmaple.Rd
 16c3c38115842264039146e5f9fb0c76 *man/summary.qde.Rd
 c6f487882011fa58c827c64bf2060c5e *man/summary.qrjoint.Rd
 abce0c354326e9bb52bb612c65e67291 *man/waic.Rd
-67a174a734fef75135bf81a86fba4f63 *src/qrjoint.c
+ef86aec095ef4c711e71f414ac660777 *src/qrjoint.c
 5e8a615e3417534c969e4631b293bafd *src/registerDynamicSymbol.c

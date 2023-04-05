@@ -511,7 +511,7 @@ double logpostFn(double *par, double temp, int llonly, double *ll, double *pg, d
             ll[i] = log(0.0);
             rp[i] = taugrid[mid];
         }
-        mmprod(vMat, x, a, L, p, n, 1, 1, 0); // vMat%*%x  (L x p0)%*%(p x n) gives 'a' (L x n) as output
+        mmprod(vMat, x, a, L, p, n, 1, 1, 0); // t(vMat)%*%t(x). dim(vMat) = pxL, dim(x) = nxp, gives 'a' (Lxn) as output
         for(l = 0; l < L; l++){
             for(vNormSq[l] = 0.0, j = 0; j < p; j++) vNormSq[l] += vMat[j][l] * vMat[j][l];
             if(vNormSq[l] > 0.0){
@@ -1541,29 +1541,6 @@ int rdraw(int n, double *prob, int inlog){
 }
 
 
-// Unused function
-void locator_string(int *ix, int n, char *a){
-	const char *fmt[2];	fmt[0] = "%d";	fmt[1] = ".%d";	
-	int i, skip = 0;
-	for(i = 0; i < n; i++){
-		if(ix[i]){
-			sprintf(a + skip, fmt[skip > 0], i + 1);
-			skip = strlen(a);
-		}
-	}
-}
-
-
-// Unused function
-void locator_string_inverse(char *a, int *ix){
-	const char s[2] = ".";
-	char *token;
-	token = strtok(a, s);
-	while( token != NULL ) {
-		ix[atoi(token) - 1] = 1;
-		token = strtok(a, s);
-	}
-}
 
 
 // Matrix-matrix product.  a is the matrix, b is a matrix, c the matrix output,

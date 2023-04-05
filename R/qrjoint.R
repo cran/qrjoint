@@ -29,7 +29,7 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
     
     # Set design matrix, response vector, weights
     mf <- match.call(expand.dots = FALSE)
-    m <- match(c("formula", "data"), names(mf), 0L)
+    m <- match(c("formula", "data", "cens", "wt"), names(mf), 0L)
     mf <- mf[c(1L, m)]
     mf$drop.unused.levels <- TRUE
     #mf$na.action <- "na.fail"   # current implementation is model.frame default of "na.omit" no error/warning given
@@ -49,6 +49,15 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
     n <- nrow(x)
     p <- ncol(x)
     x <- scale(x, chull.center(x))
+    illcond <- (qr(x)$rank < p)
+
+    cens <- model.extract(mf,"cens")
+    wt <- model.extract(mf,"wt")
+    
+    if(illcond & par!="noX"){
+        warning("Ill condiitoned design matrix. Changing parameter initialization to 'noX'")
+        par <- "noX"
+    }
     
     if(is.null(cens)) cens <- rep(0,n) else{
         cens <- as.vector(cens)
@@ -185,7 +194,7 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
         # Initialize at a model space approximation of the estimates from rq
         par <- rep(0, (nknots+1) * (p+1) + 2)
         
-        beta.rq <- sapply(tau.g, function(a) return(coef(suppressWarnings(quantreg::rq(dither(y)~ x, tau = a, weights = wt)))))
+        beta.rq <- sapply(tau.g, function(a) return(coef(suppressWarnings(quantreg::rq(quantreg::dither(y)~ x, tau = a, weights = wt)))))
         v <- bs(tau.g, df = 5)
         rq.lm <- apply(beta.rq, 1, function(z) return(coef(lm(z ~ v)))) # smooth though non-monotonic estimates
         
@@ -287,11 +296,18 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
         blocks[[p + 2]][nknots*(p+1) + 1:(p+1)] <- TRUE                        # Update medians
         blocks[[p + 3]][(nknots+1)*(p+1) + 1:2] <- TRUE                        # Update sigma and nu
     } else if(blocking == "std5"){
-        blocks <- replicate(p + 4, rep(FALSE, npar), simplify = FALSE)        # Same as previous with additional update to ALL parameters
+        blocks <- replicate(p + 4, rep(FALSE, npar), simplify = FALSE)        # std4 + single
         for(i in 0:p) blocks[[i + 1]][c(i * nknots + 1:nknots, nknots*(p+1) + i + 1)] <- TRUE
         blocks[[p + 2]][nknots*(p+1) + 1:(p+1)] <- TRUE
         blocks[[p + 3]][(nknots+1)*(p+1) + 1:2] <- TRUE
         blocks[[p + 4]][1:npar] <- TRUE
+    } else if(blocking == "std6"){
+      blocks <- replicate(2*p+4, rep(FALSE,npar), simplify = FALSE)           # std5 + update intercept,covariate GP pairs
+      for(i in 0:p) blocks[[i+1]][c(i*nknots+1:nknots, nknots*(p+1)+i+1)] <- TRUE # GP + corresponding median
+      blocks[[p+2]][nknots*(p+1) + 1:(p+1)] <- TRUE
+      blocks[[p+3]][(nknots+1)*(p+1) + 1:2] <- TRUE
+      blocks[[p+4]][1:npar] <- TRUE
+      for(i in 1:p) blocks[[p+4+i]][c(1:nknots,i*nknots+1:nknots)] <- TRUE    # intercept GP, covariate GP together
     } else {                                                                # Univariate updates
         blocks <- replicate(npar, rep(FALSE, npar), simplify = FALSE)
         for(i in 1:npar) blocks[[i]][i] <- TRUE
@@ -309,15 +325,22 @@ qrjoint <- function(formula, data, nsamp = 1e3, thin = 10, cens = NULL,
         if(substr(blocking, 1, 3) == "std"){
             for(i in 1:(p+1)) blocks.S[[i]][1:nknots, 1:nknots] <- K0
             if(as.numeric(substr(blocking, 4,5)) > 1){
-                blocks.S[[p + 2]] <- summary(suppressWarnings(quantreg::rq(dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
+                if(!illcond) blocks.S[[p + 2]] <- summary(suppressWarnings(quantreg::rq(quantreg::dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
                 blocks.S[[p + 3]] <- matrix(c(1, 0, 0, .1), 2, 2)[sig.nu,sig.nu]
             }
-            if(as.numeric(substr(blocking, 4,5)) == 5){
+            if(as.numeric(substr(blocking, 4,5)) > 4){
                 slist <- list(); length(slist) <- p + 3
                 for(i in 1:(p+1)) slist[[i]] <- K0
-                slist[[p+2]] <- summary(suppressWarnings(quantreg::rq(dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
+                if(illcond){
+                    slist[[p+2]] <- diag(1,p+1)
+                } else {
+                    slist[[p+2]] <- summary(suppressWarnings(quantreg::rq(dither(y) ~ x, tau = 0.5, weights = wt)), se = "boot", cov = TRUE)$cov
+                }
                 slist[[p+3]] <- matrix(c(1, 0, 0, .1), 2, 2)[sig.nu,sig.nu]
                 blocks.S[[p + 4]] <- as.matrix(bdiag(slist))
+                if(blocking=="std6"){
+                  for(i in 1:p) blocks.S[[p+4+i]] <- as.matrix(bdiag(slist[c(1,i+1)]))
+                }
             }
         }
         blocks.S <- unlist(blocks.S)
@@ -854,6 +877,7 @@ summary.qrjoint <- function(object, ntrace = 1000, burn.perc = 0.5, plot.dev = T
 	}
 	invisible(list(deviance = deviance, pg = pg, prox = prox.samp, ll = ll, ql = ql, waic = fit.waic))
 }
+
 
 summary.qde <- function(object, ntrace = 1000, burn.perc = 0.5, plot.dev = TRUE, more.details = FALSE, ...){
     thin <- object$dim[8]
